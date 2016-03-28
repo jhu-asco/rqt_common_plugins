@@ -78,6 +78,12 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
   ui_.save_as_image_push_button->setIcon(QIcon::fromTheme("image-x-generic"));
   connect(ui_.save_as_image_push_button, SIGNAL(pressed()), this, SLOT(saveImage()));
 
+  connect(ui_.roi_select_check_box,SIGNAL(toggled(bool)),ui_.image_frame,SLOT(roi_select_enabled(bool)));
+
+  connect(ui_.roi_select_check_box,SIGNAL(toggled(bool)),this,SLOT(roi_select_enabled(bool)));
+
+  connect(ui_.image_frame,SIGNAL(roi_selected(QRect)),this,SLOT(roiPublish(QRect)));
+
   // set topic name if passed in as argument
   const QStringList& argv = context.argv();
   if (!argv.empty()) {
@@ -285,7 +291,7 @@ void ImageView::onZoom1(bool checked)
 
 void ImageView::onDynamicRange(bool checked)
 {
-  ui_.max_range_double_spin_box->setEnabled(!checked);
+    ui_.max_range_double_spin_box->setEnabled(!checked);
 }
 
 void ImageView::saveImage()
@@ -300,6 +306,33 @@ void ImageView::saveImage()
   }
 
   img.save(file_name);
+}
+
+void ImageView::roi_select_enabled(bool checked)
+{
+   ros::NodeHandle &nh_ = getNodeHandle();
+   if(checked)
+   {
+       roi_publisher_ = nh_.advertise<sensor_msgs::RegionOfInterest>("roi", 1);
+   }
+   else
+   {
+       roi_publisher_.shutdown();
+   }
+}
+
+void ImageView::roiPublish(QRect rect)
+{
+    QCheckBox * roi_select_check_box = ui_.roi_select_check_box;
+    if(roi_select_check_box->isChecked())
+    {
+      sensor_msgs::RegionOfInterest roi_msg;
+      roi_msg.x_offset = rect.left();
+      roi_msg.y_offset = rect.top();
+      roi_msg.width = rect.width();
+      roi_msg.height = rect.height();
+      roi_publisher_.publish(roi_msg);
+    }
 }
 
 void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)

@@ -39,6 +39,8 @@ namespace rqt_image_view {
 RatioLayoutedFrame::RatioLayoutedFrame(QWidget* parent, Qt::WFlags flags)
   : QFrame()
   , aspect_ratio_(4, 3)
+  , drag_flag_(false)
+  , roi_select_enabled_flag_(false)
 {
   connect(this, SIGNAL(delayed_update()), this, SLOT(update()), Qt::QueuedConnection);
 }
@@ -119,6 +121,103 @@ void RatioLayoutedFrame::setInnerFrameFixedSize(const QSize& size)
   setInnerFrameMaximumSize(size);
 }
 
+void rqt_image_view::RatioLayoutedFrame::roi_select_enabled(bool checked)
+{
+   roi_select_enabled_flag_ = checked;
+}
+
+void RatioLayoutedFrame::mouseReleaseEvent(QMouseEvent *event)
+{
+    if(drag_flag_ && roi_select_enabled_flag_ && event->button() == Qt::LeftButton)
+    {
+        drag_flag_ = false;
+
+        //Create a Qrect with proper size for publishing:
+        QRect image_window_rect;
+        int qimage_width, qimage_height;
+        qimage_mutex_.lock();
+        if (!qimage_.isNull())
+        {
+            image_window_rect = contentsRect();
+            qimage_width = std::abs(qimage_.width());
+            qimage_height = std::abs(qimage_.height());
+        }
+        else
+        {
+            qimage_mutex_.unlock();
+            return;//Image is null so dont need to do anything
+        }
+        qimage_mutex_.unlock();
+        //Find Final rectangle coords
+        int left, top, width, height;
+        if(roi_rect_.width() < 0){
+            left = roi_rect_.right();
+            width = -roi_rect_.width();
+        }
+        else{
+            left = roi_rect_.left();
+            width = roi_rect_.width();
+        }
+        if(roi_rect_.height() < 0){
+            top = roi_rect_.bottom();
+            height = -roi_rect_.height();
+        }
+        else{
+            top = roi_rect_.top();
+            height = roi_rect_.height();
+        }
+
+        //Account for -ve left and -ve top coords and width and height being out of bounds:
+        if(left < 0)
+        {
+            width = width + left;
+            left = 0;
+        }
+        else if(width > image_window_rect.width())
+        {
+            width = image_window_rect.width();
+        }
+
+        if(top < 0)
+        {
+            height = height + top;
+            top = 0;
+        }
+        else if(height > image_window_rect.height())
+        {
+            height = image_window_rect.height();
+        }
+        //scale:
+        left = (left*qimage_width)/image_window_rect.width();
+        top = (top*qimage_height)/image_window_rect.height();
+        width = (width*qimage_width)/image_window_rect.width();
+        height = (height*qimage_height)/image_window_rect.height();
+        emit roi_selected(QRect(left,top,width,height));
+    }
+}
+
+void RatioLayoutedFrame::mouseMoveEvent(QMouseEvent *event)
+{
+   //Dragging the mouse:
+    if(drag_flag_ && roi_select_enabled_flag_)
+    {
+        int width = (event->x() - roi_rect_.x());
+        int height = (event->y() - roi_rect_.y());
+        roi_rect_.setHeight(height);
+        roi_rect_.setWidth(width);
+    }
+}
+
+void RatioLayoutedFrame::mousePressEvent(QMouseEvent *event)
+{
+    if(roi_select_enabled_flag_ && event->buttons() == Qt::LeftButton)
+    {
+        roi_rect_.setX(event->x());
+        roi_rect_.setY(event->y());
+        drag_flag_ = true;
+    }
+}
+
 void RatioLayoutedFrame::setAspectRatio(unsigned short width, unsigned short height)
 {
   int divisor = greatestCommonDivisor(width, height);
@@ -139,6 +238,14 @@ void RatioLayoutedFrame::paintEvent(QPaintEvent* event)
     //QPaintEvent* paint_event = dynamic_cast<QPaintEvent*>(event);
     //painter.drawImage(paint_event->rect(), qimage_);
     painter.drawImage(contentsRect(), qimage_);
+    if(drag_flag_)//If we are dragging, we plot the rectangle over the image
+    {
+      painter.setPen(Qt::red);
+      painter.setBrush(Qt::NoBrush);
+      painter.drawRect(roi_rect_);
+      painter.end();
+    }
+
   } else {
     // default image with gradient
     QLinearGradient gradient(0, 0, frameRect().width(), frameRect().height());
