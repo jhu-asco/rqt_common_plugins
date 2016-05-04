@@ -87,6 +87,7 @@ signals:
 
   void delayed_update();
   void roi_selected(QRect rect);
+  void roi_started();
 
  protected slots:
 

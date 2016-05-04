@@ -205,6 +205,7 @@ void RatioLayoutedFrame::mouseMoveEvent(QMouseEvent *event)
         int height = (event->y() - roi_rect_.y());
         roi_rect_.setHeight(height);
         roi_rect_.setWidth(width);
+        emit delayed_update();//Will force update of image
     }
 }
 
@@ -215,6 +216,7 @@ void RatioLayoutedFrame::mousePressEvent(QMouseEvent *event)
         roi_rect_.setX(event->x());
         roi_rect_.setY(event->y());
         drag_flag_ = true;
+        emit roi_started();
     }
 }
 

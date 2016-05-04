@@ -99,6 +99,8 @@ protected slots:
 
   virtual void roiPublish(QRect rect);
 
+  virtual void roiStarted();
+
 protected:
 
   virtual void callbackImage(const sensor_msgs::Image::ConstPtr& msg);
@@ -110,6 +112,12 @@ protected:
   image_transport::Subscriber subscriber_;
 
   ros::Publisher roi_publisher_;
+
+  image_transport::Publisher roi_img_publisher_;
+
+  bool roi_started_;
+
+  bool published_image_;
 
   cv::Mat conversion_mat_;
 
