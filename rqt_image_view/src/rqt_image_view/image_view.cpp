@@ -331,6 +331,8 @@ void ImageView::roi_select_enabled(bool checked)
 
 void ImageView::roiPublish(QRect rect)
 {
+  if(roi_started_)
+  {
     roi_started_ = false;
     published_image_ = false;
     QCheckBox * roi_select_check_box = ui_.roi_select_check_box;
@@ -343,6 +345,7 @@ void ImageView::roiPublish(QRect rect)
       roi_msg.height = rect.height();
       roi_publisher_.publish(roi_msg);
     }
+  }
 }
 
 void ImageView::roiStarted()

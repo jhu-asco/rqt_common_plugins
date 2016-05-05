@@ -40,6 +40,7 @@ RatioLayoutedFrame::RatioLayoutedFrame(QWidget* parent, Qt::WFlags flags)
   : QFrame()
   , aspect_ratio_(4, 3)
   , drag_flag_(false)
+  , image_freeze_(false)
   , roi_select_enabled_flag_(false)
 {
   connect(this, SIGNAL(delayed_update()), this, SLOT(update()), Qt::QueuedConnection);
@@ -131,6 +132,7 @@ void RatioLayoutedFrame::mouseReleaseEvent(QMouseEvent *event)
     if(drag_flag_ && roi_select_enabled_flag_ && event->button() == Qt::LeftButton)
     {
         drag_flag_ = false;
+        image_freeze_ = false;
 
         //Create a Qrect with proper size for publishing:
         QRect image_window_rect;
@@ -211,12 +213,20 @@ void RatioLayoutedFrame::mouseMoveEvent(QMouseEvent *event)
 
 void RatioLayoutedFrame::mousePressEvent(QMouseEvent *event)
 {
-    if(roi_select_enabled_flag_ && event->buttons() == Qt::LeftButton)
+    if(roi_select_enabled_flag_)
     {
+      if(event->buttons() == Qt::LeftButton)
+      {
         roi_rect_.setX(event->x());
         roi_rect_.setY(event->y());
-        drag_flag_ = true;
+        if(image_freeze_ == true)
+          drag_flag_ = true;
+      }
+      else if(event->buttons() == Qt::RightButton)
+      {
+        image_freeze_ = true;
         emit roi_started();
+      }
     }
 }
 

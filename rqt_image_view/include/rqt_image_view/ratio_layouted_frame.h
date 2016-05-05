@@ -112,6 +112,8 @@ private:
 
   bool drag_flag_;///< flag to set mouse is being dragged for ROI
 
+  bool image_freeze_;///< flag to check if image is frozen or not 
+
   bool roi_select_enabled_flag_;///< flag to set that roi selection is being carried out otherwise rectangle is not drawn and signal is not sent
 
 };
