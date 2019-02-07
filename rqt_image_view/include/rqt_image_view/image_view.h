@@ -119,6 +119,10 @@ protected:
 
   bool published_image_;
 
+  bool save_image_;
+
+  sensor_msgs::ImagePtr saved_image_;
+
   cv::Mat conversion_mat_;
 
 private:

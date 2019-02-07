@@ -57,6 +57,7 @@ void ImageView::initPlugin(qt_gui_cpp::PluginContext& context)
   widget_ = new QWidget();
   ui_.setupUi(widget_);
 
+  save_image_ = false;
   roi_started_ = false;//Initially roi is not started
   published_image_ = false;
 
@@ -351,6 +352,7 @@ void ImageView::roiPublish(QRect rect)
 void ImageView::roiStarted()
 {
   roi_started_ = true;
+  save_image_ = true;
 }
 
 void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
@@ -412,15 +414,15 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
     QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, conversion_mat_.step[0], QImage::Format_RGB888);
     ui_.image_frame->setImage(image);
   }
-  else
+  if(save_image_) 
   {
-    if(!published_image_)
-    {
-      //Publish the image which is used for roi
-      cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg);
-      roi_img_publisher_.publish(cv_ptr->toImageMsg());//Give the same input image
-      published_image_ = true;
-    }
+    saved_image_ = cv_bridge::toCvCopy(msg)->toImageMsg();
+    save_image_ = false;
+  }
+  if(!published_image_ && !save_image_ && saved_image_ != NULL)
+  {
+    roi_img_publisher_.publish(saved_image_);//Give the same input image
+    published_image_ = true;
   }
 
   if (!ui_.zoom_1_push_button->isEnabled())
